@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:camel="http://camel.apache.org/schema/blueprint"
+	xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.0.0"
+	xsi:schemaLocation="
+       http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+       http://camel.apache.org/schema/blueprint http://camel.apache.org/schema/blueprint/camel-blueprint.xsd">
+
+	<cm:property-placeholder id="twitterConfig"
+		persistent-id="jboss.keynote2014.twitter" />
+
+    <bean id="myHandler" class="com.burrsutter.twitterweather2.MyHandler"></bean>
+	<bean id="twitterConvertBean" class="com.burrsutter.twitterweather2.TwitterConvertBean">
+		<property name="id" value="${tweet.id}" />
+		<property name="date" value="${tweet.date}" />
+		<property name="name" value="${tweet.name}" />
+		<property name="screenName" value="${tweet.screenName}" />
+		<property name="text" value="${tweet.text}" />
+		<property name="tag" value="${tweet.tag}" />
+		<property name="location" value="${tweet.location}" />
+		<property name="latitude" value="${tweet.latitude}" />
+		<property name="longitude" value="${tweet.longitude}" />
+	</bean>
+
+	<camelContext id="blueprintContext" xmlns="http://camel.apache.org/schema/blueprint">
+    <propertyPlaceholder location="blueprint:twitterConfig" id="properties"/>
+    <route customId="true" id="twitter-stream">
+        <from uri="twitter://streaming/filter?type=event&amp;keywords=#demodown&amp;accessToken=761744586-tDkDY1RqXnCWLr7AU0zkbpvImDNjLTQMl9hwee68&amp;accessTokenSecret=jBbVuDojqmpWpCrAZemJnTKmfLvN6lcUNy11gNclczo&amp;consumerKey=H5FAP3Ak8L9ZniQ6sRgxNQ&amp;consumerSecret=twhGrmlZHZlDoyCuEttK2TgmURhTZBCLzbOQ74YBgg"/>
+        <log message="Burr ${body.user.screenName} tweeted: ${body.text} from ${body.user.location}"/>
+        <to uri="log:myMessage"/>
+        <to uri="bean:twitterConvertBean"/>
+        <to uri="bean:myHandler"/>
+        <marshal>
+            <json library="Jackson"/>
+        </marshal>
+        <to uri="amq:queue:contextualtweets?jmsMessageType=Text"/>
+    </route>
+</camelContext>
+
+</blueprint>
